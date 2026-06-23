@@ -425,6 +425,7 @@
       <div class="summary-actions">
         <button class="share" id="saveImgBtn">💾 บันทึกภาพสรุป</button>
         <button class="share" id="shareImgBtn">📤 แชร์ภาพสรุป</button>
+        <button class="secondary" id="copyCaptionBtn">📋 คัดลอกแคปชั่นชวนเล่น</button>
         <button class="secondary" id="restartBtn">เปิดชุดนี้อีกครั้ง</button>
         <button id="otherModeBtn">ลองโหมดอื่น</button>
       </div>
@@ -863,7 +864,7 @@ async function buildSummaryCanvas(){
   const headerH = 130;
   const concernH = concern ? 100 : 0;
   const rowH = 150;
-  const footerH = 170;
+  const footerH = 220;
   const H = headerH + concernH + cardsDrawn.length*rowH + footerH + 30;
 
   const canvas = document.createElement('canvas');
@@ -937,10 +938,19 @@ async function buildSummaryCanvas(){
   ctx.drawImage(boxImg, 48, y+18, 110, 110);
   ctx.fillStyle = '#1a8586';
   ctx.font = '700 21px Kanit, sans-serif';
-  ctx.fillText('Tarot of Learning', 175, y+55);
+  ctx.fillText('Tarot of Learning', 175, y+50);
   ctx.fillStyle = '#3f6e6d';
   ctx.font = '400 14px Kanit, sans-serif';
-  wrapText(ctx, 'ไพ่ทาโรต์เพื่อการเรียนรู้ โดย Wizards of Learning หาไพ่จริงไว้เปิดเองได้ที่ Shopee', 175, y+82, W-220, 19);
+  wrapText(ctx, 'ไพ่ทาโรต์เพื่อการเรียนรู้ โดย Wizards of Learning หาไพ่จริงไว้เปิดเองได้ที่ Shopee', 175, y+74, W-220, 19);
+
+  // play-link CTA pill
+  ctx.fillStyle = '#fec566';
+  roundRect(ctx, 175, y+108, W-225, 44, 22); ctx.fill();
+  ctx.fillStyle = '#1a8586';
+  ctx.font = '700 16px Kanit, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('🔮 มาเปิดไพ่ของตัวเองได้ที่ ' + SITE_URL.replace('https://',''), 175 + (W-225)/2, y+136);
+  ctx.textAlign = 'left';
 
   return canvas;
 }
@@ -963,8 +973,50 @@ async function withButtonBusy(btn, busyText, fn){
   }
 }
 
+const SITE_URL = 'https://wollab.github.io/WoL_Tarot_of_Learning/';
+const MODE_EMOJI = { daily:'🔮', solve:'🧩', holistic:'🌿', self:'🪞' };
+
+function buildShareCaption(){
+  const emoji = MODE_EMOJI[currentMode.id] || '✨';
+  const lines = [];
+  lines.push(`${emoji} เพิ่งเปิดไพ่ "${currentMode.label}" จาก Tarot of Learning มา! 🃏✨`);
+  lines.push('');
+
+  const concern = concernBox.classList.contains('hidden') ? '' : concernInput.value.trim();
+  if(concern){
+    lines.push(`📝 เรื่องที่กังวล: "${concern}"`);
+    lines.push('');
+  }
+
+  currentMode.slots.forEach((label, i)=>{
+    const card = drawnCards[i];
+    if(!card) return;
+    lines.push(`🎴 ${label} → ${card.head}`);
+    lines.push(`💬 "${card.openTh}"`);
+    lines.push('');
+  });
+
+  lines.push('อยากรู้ว่าไพ่จะบอกอะไรกับตัวเองบ้าง ลองเปิดดูเลย 👇');
+  lines.push(`🔗 ${SITE_URL}`);
+  lines.push('');
+  lines.push('🪄 Tarot of Learning — by Wizards of Learning');
+  return lines.join('\n');
+}
+
 const saveImgBtn = document.getElementById('saveImgBtn');
 const shareImgBtn = document.getElementById('shareImgBtn');
+const copyCaptionBtn = document.getElementById('copyCaptionBtn');
+
+copyCaptionBtn.addEventListener('click', async ()=>{
+  const original = copyCaptionBtn.textContent;
+  try{
+    await navigator.clipboard.writeText(buildShareCaption());
+    copyCaptionBtn.textContent = '✅ คัดลอกแล้ว! เอาไปวางตอนโพสต์ได้เลย';
+  }catch(e){
+    copyCaptionBtn.textContent = '⚠️ คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง';
+  }
+  setTimeout(()=>{ copyCaptionBtn.textContent = original; }, 2500);
+});
 
 saveImgBtn.addEventListener('click', ()=>{
   withButtonBusy(saveImgBtn, 'กำลังสร้างภาพ...', async ()=>{
@@ -998,7 +1050,7 @@ shareImgBtn.addEventListener('click', ()=>{
         await navigator.share({
           files:[file],
           title:'Tarot of Learning',
-          text:'คำแนะนำของฉันจาก Tarot of Learning by Wizards of Learning'
+          text:buildShareCaption()
         });
       }catch(e){ /* user cancelled share — not an error */ }
     }else{
