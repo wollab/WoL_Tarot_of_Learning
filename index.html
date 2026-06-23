@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarot of Learning — คำแนะนำประจำวัน</title>
+<style>
+  :root{
+    --bg-1:#150b28;
+    --bg-2:#2c1654;
+    --gold:#e8c468;
+    --gold-soft:#f5e2a8;
+    --ink:#f3eee0;
+    --card-w:260px;
+    --card-h:445px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:radial-gradient(circle at 50% 20%, var(--bg-2), var(--bg-1) 70%);
+    font-family:'Trebuchet MS', 'Segoe UI', sans-serif;
+    color:var(--ink);
+    padding:32px 16px;
+    overflow-x:hidden;
+  }
+  .stars{
+    position:fixed; inset:0; z-index:0; pointer-events:none;
+  }
+  .stars span{
+    position:absolute; width:3px; height:3px; background:var(--gold-soft);
+    border-radius:50%; opacity:.6; animation:twinkle 3s ease-in-out infinite;
+  }
+  @keyframes twinkle{0%,100%{opacity:.15;}50%{opacity:.9;}}
+
+  .stage{
+    position:relative; z-index:1;
+    width:100%; max-width:560px;
+    text-align:center;
+  }
+  h1{
+    font-size:1.7rem; letter-spacing:.08em; margin:0 0 4px;
+    color:var(--gold-soft); text-shadow:0 0 18px rgba(232,196,104,.5);
+  }
+  .sub{
+    margin:0 0 28px; font-size:.95rem; opacity:.75;
+  }
+  .deck-area{
+    display:flex; flex-direction:column; align-items:center; gap:22px;
+  }
+  .card-frame{
+    width:var(--card-w); height:var(--card-h);
+    perspective:1400px;
+  }
+  .card-3d{
+    width:100%; height:100%; position:relative;
+    transform-style:preserve-3d;
+    transition:transform 1.1s cubic-bezier(.2,.8,.2,1);
+  }
+  .card-3d.flipped{ transform: rotateY(180deg); }
+  .card-3d.shaking{ animation: shake .5s ease-in-out infinite; }
+  @keyframes shake{
+    0%,100%{ transform: translateY(0) rotate(0); }
+    25%{ transform: translateY(-6px) rotate(-2deg); }
+    75%{ transform: translateY(-6px) rotate(2deg); }
+  }
+  .face{
+    position:absolute; inset:0; backface-visibility:hidden;
+    border-radius:18px; overflow:hidden;
+    box-shadow:0 18px 38px rgba(0,0,0,.55), 0 0 0 1px rgba(232,196,104,.25);
+  }
+  .face img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .face.back{ background:#1a0e33; }
+  .face.front{ transform: rotateY(180deg); }
+
+  .glow{
+    position:absolute; inset:-14px; border-radius:26px;
+    background:radial-gradient(circle, rgba(232,196,104,.35), transparent 70%);
+    opacity:0; transition:opacity .6s ease; pointer-events:none; filter:blur(4px);
+  }
+  .card-frame.revealed .glow{ opacity:1; }
+
+  button{
+    font-family:inherit; font-size:1rem; letter-spacing:.04em;
+    padding:13px 30px; border-radius:999px; border:1px solid var(--gold);
+    background:linear-gradient(180deg, rgba(232,196,104,.18), rgba(232,196,104,.05));
+    color:var(--gold-soft); cursor:pointer;
+    transition:transform .15s ease, box-shadow .25s ease, opacity .2s ease;
+  }
+  button:hover{ box-shadow:0 0 22px rgba(232,196,104,.45); transform:translateY(-1px); }
+  button:disabled{ opacity:.45; cursor:default; transform:none; box-shadow:none; }
+
+  .status{ min-height:22px; font-size:.85rem; opacity:.7; letter-spacing:.03em; }
+
+  .reading{
+    width:100%;
+    margin-top:6px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(232,196,104,.25);
+    border-radius:16px;
+    padding:22px 24px 26px;
+    opacity:0; transform:translateY(8px);
+    transition:opacity .6s ease, transform .6s ease;
+  }
+  .reading.show{ opacity:1; transform:translateY(0); }
+  .reading .name{
+    font-size:1.25rem; color:var(--gold-soft); margin:0 0 2px; font-weight:600;
+  }
+  .reading .type{
+    font-size:.8rem; opacity:.65; margin:0 0 14px; letter-spacing:.05em;
+  }
+  .reading .quote{
+    font-style:italic; font-size:1.05rem; margin:0 0 14px; line-height:1.5;
+  }
+  .reading .quote .en{ display:block; opacity:.6; font-size:.85rem; margin-top:4px; font-style:normal;}
+  .reading .meaning{
+    font-size:.92rem; line-height:1.7; opacity:.9; text-align:left;
+  }
+  .reading .meaning .en{
+    display:block; margin-top:10px; opacity:.6; font-size:.82rem;
+  }
+  hr.div{ border:none; border-top:1px solid rgba(232,196,104,.2); margin:14px 0; }
+
+  footer{
+    margin-top:26px; font-size:.72rem; opacity:.45;
+  }
+
+  @media (max-width:420px){
+    :root{ --card-w:210px; --card-h:360px; }
+    h1{ font-size:1.4rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars" id="stars"></div>
+
+<div class="stage">
+  <h1>TAROT OF LEARNING</h1>
+  <p class="sub">เปิดไพ่ 1 ใบ รับคำแนะนำสำหรับการเรียนรู้ของคุณวันนี้</p>
+
+  <div class="deck-area">
+    <div class="card-frame" id="cardFrame">
+      <div class="glow"></div>
+      <div class="card-3d" id="card3d">
+        <div class="face back"><img src="assets/card-back.png" alt="Tarot of Learning back"></div>
+        <div class="face front"><img id="cardImg" src="" alt=""></div>
+      </div>
+    </div>
+
+    <button id="drawBtn">เปิดไพ่แนะนำวันนี้</button>
+    <div class="status" id="status"></div>
+
+    <div class="reading" id="reading">
+      <p class="name" id="rName"></p>
+      <p class="type" id="rType"></p>
+      <p class="quote" id="rQuote"></p>
+      <hr class="div">
+      <p class="meaning" id="rMeaning"></p>
+      <hr class="div">
+      <button id="rerollBtn" style="margin-top:4px;">สุ่มใหม่ (เผื่ออยากลองอีกใบ)</button>
+    </div>
+  </div>
+
+  <footer>Tarot of Learning — by Wizards of Learning</footer>
+</div>
+
+<script>
+const CARDS = [
+  {n:0, img:"t-0.png", head:"The Fool", type:"Explorer", tagEn:"Curiosity and Beginner's Mind", tagTh:"ความอยากรู้อยากเห็นและจิตใจของผู้เริ่มต้น",
+   openEn:"Let your heart lead; the journey awaits.", openTh:"หัวใจนำทาง การผจญภัยรออยู่",
+   meanEn:"Represents a fresh start in learning, driven by curiosity and the willingness to explore fearlessly. Encourages learners to take risks and embrace new challenges without preconceptions.",
+   meanTh:"แทนการเริ่มต้นใหม่ ความอยากรู้อยากเห็นและความกล้าที่จะทดลองสิ่งใหม่ๆ โดยปราศจากความกลัว พร้อมส่งเสริมให้กล้าที่จะเสี่ยงและเผชิญกับความท้าทายใหม่ๆ"},
+  {n:1, img:"t-1.png", head:"The Magician", type:"Practice", tagEn:"Mastery and Applied Knowledge", tagTh:"ความชำนาญและการนำความรู้ไปใช้",
+   openEn:"You already have it all—just start creating", openTh:"ทุกอย่างพร้อมแล้ว เหลือแค่คุณลงมือเท่านั้น",
+   meanEn:"Symbolizes the power of applying knowledge in real-world contexts. Encourages learners creatively integrate skills or knowledge from different fields.",
+   meanTh:"เป็นสัญลักษณ์ของการนำความรู้ไปใช้ในสถานการณ์จริง ส่งเสริมการผสมผสานทักษะและความรู้หลากหลายด้านอย่างสร้างสรรค์ในแบบของตัวเอง"},
+  {n:2, img:"t-2.png", head:"The High Priestess", type:"Spiritual", tagEn:"Intuition and Reflective Learning", tagTh:"สัญชาตญาณและการเรียนรู้เชิงสะท้อน",
+   openEn:"Your heart always knows before your mind—trust it.", openTh:"หัวใจรู้ก่อนสมองเสมอ ฟังมันแล้วคุณจะเข้าใจ",
+   meanEn:"Represents the power of intuition and deep reflective learning. Encourages students to trust their instincts and explore internal wisdom.",
+   meanTh:"เป็นสัญลักษณ์ของการใช้สัญชาตญาณ และการเรียนรู้อย่างลึกซึ้ง ที่ส่งเสริมให้เราเชื่อมั่นในความนึกคิดภายในและเปิดโอกาสให้เราสำรวจความรู้ที่อยู่ข้างในตัวเราเอง"},
+  {n:3, img:"t-3.png", head:"The Empress", type:"Designer", tagEn:"Creative and Nurturing Learning Environment", tagTh:"สภาพแวดล้อมที่สนับสนุนการเรียนรู้อย่างสร้างสรรค์",
+   openEn:"A safe space lets your heart blossom.", openTh:"พื้นที่ปลอดภัย ใจเบ่งบาน",
+   meanEn:"Symbolizes a nurturing, supportive environment where creativity thrives. Fostering a safe space for learners to express themselves and grow.",
+   meanTh:"เป็นสัญลักษณ์ของสภาพแวดล้อมที่คอยสนับสนุนให้ความคิดสร้างสรรค์เบ่งบาน ส่งเสริมให้เรารู้สึกปลอดภัยในการแสดงออกถึงตัวตนและเติบโตไปด้วยกัน"},
+  {n:4, img:"t-4.png", head:"The Emperor", type:"Designer", tagEn:"Structured and Disciplined Learning", tagTh:"การเรียนรู้ที่มีโครงสร้างและระเบียบวินัย",
+   openEn:"1% talent and 99% discipline", openTh:"พรสวรรค์ คือ 1% อีก 99% คือวินัย",
+   meanEn:"Represents structure, discipline, and authority in education. Emphasizes the importance of frameworks, guidelines, and strategic planning for effective growth.",
+   meanTh:"ตัวแทนของโครงสร้าง ระเบียบวินัย และอำนาจในการศึกษา ขับเน้นความสำคัญของกรอบแนวคิด ขั้นตอน และแผนในการเติบโต"},
+  {n:5, img:"t-5.png", head:"The Hierophant", type:"Partner", tagEn:"Traditional Learning and Mentorship", tagTh:"การเรียนรู้แบบดั้งเดิมและการให้คำปรึกษา",
+   openEn:"Guidance lights the path, but you must take the steps.", openTh:"ผู้ใหญ่จะชี้ทาง แต่คุณต้องเลือกเดินเอง",
+   meanEn:"Symbolizes traditional education systems, mentorship, and institutional knowledge. Highlighting the value of guidance from experienced teachers and adherence to structured curricula.",
+   meanTh:"สัญลักษณ์ของระบบการศึกษาตามแบบแผน เรียนรู้โดยตรงจากผู้มีประสบการณ์ ทำตามคำแนะนำของผู้สอนและหลักสูตรที่ถูกกำหนดไว้"},
+  {n:6, img:"t-6.png", head:"The Lovers", type:"Partner", tagEn:"Collaborative Learning and Emotional Intelligence", tagTh:"การเรียนรู้แบบร่วมมือและการพัฒนาทางอารมณ์",
+   openEn:"Share views, build a better path together.", openTh:"แบ่งปันมุมมอง เพื่อสร้างเส้นทางที่ดีกว่า",
+   meanEn:"Represents the value of connection and collaboration in learning. Encourages learners to form meaningful partnerships and develop emotional intelligence.",
+   meanTh:"สะท้อนถึงความสำคัญของการเชื่อมโยงและการทำงานร่วมกันในการเรียนรู้ ส่งเสริมการสร้างความสัมพันธ์ที่มีความหมายและการพัฒนาความฉลาดทางอารมณ์"},
+  {n:7, img:"t-7.png", head:"The Chariot", type:"Motivation", tagEn:"Determination and Focused Learning", tagTh:"ความมุ่งมั่นและการเรียนรู้ที่มีเป้าหมาย",
+   openEn:"Focus on the goal; don't let distractions take control.", openTh:"มองไปที่เส้นชัย อย่าปล่อยอะไรพาคุณหลุดทาง",
+   meanEn:"Symbolizes the power of perseverance and focus. Represents goal-setting and determination to overcome challenges.",
+   meanTh:"แสดงถึงพลังของความมุ่งมั่นและตั้งใจ การให้ความสำคัญกับการตั้งเป้าหมายและความแน่วแน่ที่จะเอาชนะทุกความท้าทาย"},
+  {n:8, img:"t-8.png", head:"Strength", type:"Motivation", tagEn:"Resilience and Confidence in Learning", tagTh:"ความมั่นใจและความอดทนในการเรียนรู้",
+   openEn:"Keep fighting! Nothing is stronger than your heart.", openTh:"สู้โว้ย... ไม่มีอะไรแกร่งเกินใจของคุณ",
+   meanEn:"Fosters resilience, confidence, and patience in learning. Highlights the value of perseverance and inner strength to overcome obstacles.",
+   meanTh:"ส่งเสริมความมั่นใจ ความอดทน และความสามารถรับมือกับเรื่องต่างๆ เน้นย้ำถึงคุณค่าของความอุตสาหะและความเข้มแข็งภายในของคุณ ที่จะสามารถเอาชนะทุกอุปสรรคที่เข้ามาได้"},
+  {n:9, img:"t-9.png", head:"The Hermit", type:"Explorer", tagEn:"Self-Discovery and Independent Learning", tagTh:"การค้นพบตัวเองและการเรียนรู้ด้วยตัวเอง",
+   openEn:"Pause and listen to your heart; the answer lies within.", openTh:"หยุดพักเพื่อฟังหัวใจ และค้นหาคำตอบในตัวเอง",
+   meanEn:"Represents the profound value of independent study and self-discovery. Encourages deep introspection and learning at one's own pace.",
+   meanTh:"แทนคุณค่าที่ลึกซึ้งของการเรียนรู้ด้วยตนเองและการทำความเข้าใจด้วยตัวเอง กระตุ้นให้หันกลับมาให้เวลาในการทบทวนตัวเอง และสนับสนุนการเรียนรู้ในแบบของตนเอง"},
+  {n:10, img:"t-10.png", head:"The Wheel of Fortune", type:"Spiritual", tagEn:"Adaptability and Cycles in Learning", tagTh:"การปรับตัวและวงจรการเรียนรู้",
+   openEn:"Uncertainty is the beginning of new possibilities.", openTh:"ความไม่แน่นอนคือจุดเริ่มต้นของโอกาส",
+   meanEn:"Represents the cycles of change and growth, encouraging you to view uncertainty as an opportunity for development. It highlights the importance of adaptability and an open mind, guiding you to embrace change in any situation and turn opportunities into progress and growth.",
+   meanTh:"แทนสัญลักษณ์ของการเปลี่ยนแปลงและการเติบโต ส่งเสริมให้มองความไม่แน่นอนเป็นโอกาสในการพัฒนา เน้นความสำคัญของความยืดหยุ่นและการเปิดใจ พร้อมปรับตัวรับการเปลี่ยนแปลงในทุกสถานการณ์ เพื่อใช้โอกาสเหล่านั้นในการก้าวหน้าและเติบโต"},
+  {n:11, img:"t-11.png", head:"Justice", type:"Connector", tagEn:"Critical Thinking", tagTh:"การคิดอย่างมีวิจารณญาณ",
+   openEn:"Choose with reason, and trust your decision.", openTh:"เลือกด้วยเหตุผล และมั่นใจในสิ่งที่เลือก",
+   meanEn:"Represents the power of critical thinking. Promotes careful and comprehensive evaluation of information to make clear and precise decisions.",
+   meanTh:"เป็นสัญลักษณ์ของการคิดอย่างมีวิจารณญาณ สนับสนุนให้พิจารณาข้อมูลอย่างรอบคอบและรอบด้าน เพื่อให้สามารถตัดสินใจได้อย่างชัดเจนและแม่นยำ"},
+  {n:12, img:"t-12.png", head:"The Hanged Man", type:"Explorer", tagEn:"Perspective Shifts in Learning", tagTh:"การเปลี่ยนแปลงมุมมองในการเรียนรู้",
+   openEn:"Pause a bit, shift your wit, and flip your view.", openTh:"หยุดซักนิด เปลี่ยนมุมคิด พลิกมุมใหม่",
+   meanEn:"Represents the importance of seeing things from new perspectives, questioning familiar assumptions, and embracing creative approaches. Encourages individuals to pause and explore new possibilities.",
+   meanTh:"แทนความสำคัญของการมองสิ่งต่างๆ จากมุมมองใหม่ การตั้งคำถามต่อสิ่งที่คุ้นเคย และการเปิดรับแนวทางใหม่ที่สร้างสรรค์ ช่วยส่งเสริมให้ผู้คนหยุดเพื่อมองหาความเป็นไปได้ใหม่ๆ"},
+  {n:13, img:"t-13.png", head:"Death", type:"Creative", tagEn:"Transformation and New Learning Cycles", tagTh:"การเปลี่ยนแปลงและวงจรการเรียนรู้ใหม่",
+   openEn:"Let the old go, get the new grow.", openTh:"ล้างของเก่าไป เพื่อให้สิ่งใหม่เติบโต",
+   meanEn:"Symbolizes the transformative power of letting go and the end of unproductive habits or outdated methods. Encourages the release of old patterns to make space for new knowledge, progressive perspectives, and opportunities for meaningful growth.",
+   meanTh:"เป็นสัญลักษณ์ของพลังแห่งการเปลี่ยนแปลง การปล่อยวางจากวิธีการเดิมที่ไม่ตอบโจทย์ และการเปิดรับความรู้ใหม่ที่นำไปสู่การเติบโตและมุมมองที่ก้าวหน้า พร้อมส่งเสริมให้กล้าทิ้งสิ่งเก่าเพื่อสร้างโอกาสใหม่ในชีวิต"},
+  {n:14, img:"t-14.png", head:"Temperance", type:"Creative", tagEn:"Balance and Integration in Learning", tagTh:"ความสมดุลและการผสมผสานในการเรียนรู้",
+   openEn:"Find balance not by forcing, but by flowing.", openTh:"สมดุลเกิดจากการปรับ ไม่ใช่การฝืน",
+   meanEn:"Represents the harmony of balance and the integration of diverse learning methods. Encourages flexible and creative approaches, free from rigid frameworks, to achieve goals in a way that aligns with one's unique identity.",
+   meanTh:"แทนความสมดุลที่กลมกลืนและการผสานวิธีการเรียนรู้ที่หลากหลาย ส่งเสริมการปรับใช้แนวทางต่างๆ อย่างยืดหยุ่นและสร้างสรรค์ โดยไม่ยึดติดกับกรอบที่ตายตัว เพื่อบรรลุเป้าหมายในรูปแบบที่เหมาะสมและสอดคล้องกับตัวตนของแต่ละคน"},
+  {n:15, img:"t-15.png", head:"The Devil", type:"Spiritual", tagEn:"Breaking Free from Learning Barriers", tagTh:"การหลุดพ้นจากอุปสรรคในการเรียนรู้",
+   openEn:"The lighter you let go, the further you'll grow", openTh:"ยิ่งปล่อย ยิ่งเบา ยิ่งไปได้ไกล",
+   meanEn:"Represents the barriers that hold you back, like fear, unhealthy habits, or self-doubt. Encourages you to recognize these barriers, confront them with courage, and take steps to break free, so you can regain control and move forward with confidence.",
+   meanTh:"แทนข้อจำกัดที่ฉุดรั้งคุณไว้ ไม่ว่าจะเป็นความกลัว นิสัยที่ไม่ดี หรือความกังวลในตัวเอง ไพ่ใบนี้ชวนให้คุณตระหนักถึงพันธนาการเหล่านี้ เผชิญหน้ากับมันอย่างกล้าหาญ และค่อยๆ ปลดปล่อยตัวเอง เพื่อกลับมาควบคุมชีวิตของคุณและก้าวไปข้างหน้าด้วยความมั่นใจ"},
+  {n:16, img:"t-16.png", head:"The Tower", type:"Creative", tagEn:"Disruptive Learning and Breakthroughs", tagTh:"การเรียนรู้ที่เกิดจากการเปลี่ยนแปลงฉับพลัน",
+   openEn:"Change is inevitable. Growth is optional.", openTh:"การเปลี่ยนแปลงเลี่ยงไม่ได้ แต่การเติบโต คุณเลือกเอง",
+   meanEn:"Represents disruption that may bring loss but also lead to breakthroughs and personal growth. It encourages the discovery of new perspectives and fosters learning in innovative and creative ways.",
+   meanTh:"แทนการเปลี่ยนแปลงอย่างกระทันหันที่อาจมาพร้อมกับความสูญเสีย แต่เปิดโอกาสให้เกิดการเติบโตและพัฒนาตัวเอง นำไปสู่การค้นพบวิสัยทัศน์ใหม่ และการเรียนรู้ในรูปแบบที่แตกต่างและสร้างสรรค์"},
+  {n:17, img:"t-17.png", head:"The Star", type:"Motivation", tagEn:"Inspiration and Aspiration in Learning", tagTh:"แรงบันดาลใจและความมุ่งมั่นในการเรียนรู้",
+   openEn:"If you can dream it, you can do it.", openTh:"ถ้าคุณฝันถึงมันได้ คุณก็ทำมันได้",
+   meanEn:"Represents hope, inspiration, and great aspirations. It encourages us to explore what is truly meaningful to ourselves, turning dreams into a driving force that guides us steadily and purposefully toward our goals.",
+   meanTh:"แทนความหวัง แรงบันดาลใจ และการตั้งเป้าหมายที่ยิ่งใหญ่ ส่งเสริมให้เราสำรวจสิ่งที่มีคุณค่าต่อตนเอง พร้อมเปลี่ยนความฝันให้เป็นพลังในการเดินไปสู่เป้าหมายอย่างมั่นคงและมีทิศทาง"},
+  {n:18, img:"t-18.png", head:"The Moon", type:"Explorer", tagEn:"Exploration of the Subconscious and Uncertainty in Learning", tagTh:"การสำรวจสิ่งที่ไม่รู้และความไม่แน่นอนในการเรียนรู้",
+   openEn:"In the darkness, doubt becomes your guiding light.", openTh:"ในความมืด ความสงสัยคือแสงนำทาง",
+   meanEn:"Symbolizes the exploration of the unknown and the subconscious in learning. Encourages embracing ambiguity, exploring dreams, and diving into abstract or unclear concepts.",
+   meanTh:"เป็นสัญลักษณ์ของการสำรวจสิ่งที่ไม่รู้และการเรียนรู้เชิงจิตวิทยา ส่งเสริมให้เรายอมรับความไม่ชัดเจนและสำรวจแนวคิดเชิงนามธรรม"},
+  {n:19, img:"t-19.png", head:"The Sun", type:"Connector", tagEn:"Clarity and Enlightenment in Learning", tagTh:"ความชัดเจนและการรู้แจ้งในการเรียนรู้",
+   openEn:"Every answer begins with a question.", openTh:"ทุกคำตอบ เริ่มต้นที่ความสงสัย",
+   meanEn:"Represents clarity and enlightenment. It emphasizes the importance of seeking accurate and clear information, which reveals truth and leads to deeper understanding. The success gained from these discoveries not only brings joy but also becomes a solid foundation for future learning and growth.",
+   meanTh:"แทนความชัดเจนและการรู้แจ้ง เน้นย้ำถึงความสำคัญของการแสวงหาข้อมูลที่ถูกต้องและชัดเจน ซึ่งช่วยเปิดเผยความจริงและนำไปสู่ความเข้าใจที่ลึกซึ้ง ความสำเร็จจากการค้นพบนี้ไม่เพียงสร้างความยินดี แต่ยังกลายเป็นรากฐานอันมั่นคงสำหรับการเรียนรู้และการเติบโตในอนาคต"},
+  {n:20, img:"t-20.png", head:"Judgement", type:"Designer", tagEn:"Reflection and Evaluation in Learning", tagTh:"การสะท้อนและการประเมินผลในการเรียนรู้",
+   openEn:"Reflect to learn, not to blame.", openTh:"ประเมินเพื่อเรียนรู้ ไม่ใช่เพื่อตัดสินตัวเอง",
+   meanEn:"Represents profound reflection and thoughtful evaluation. It inspires us to review our past journey, draw lessons from previous experiences, and transform those insights into a clear and confident roadmap for the future.",
+   meanTh:"เป็นสัญลักษณ์ของการสะท้อนและประเมินตนเองอย่างลึกซึ้ง ส่งเสริมให้เราทบทวนเส้นทางที่ผ่านมา เรียนรู้จากบทเรียนในอดีต และนำความเข้าใจเหล่านั้นมาใช้เป็นแนวทางในการวางแผนอนาคตอย่างมั่นใจและมีเป้าหมายที่ชัดเจน"},
+  {n:21, img:"t-21.png", head:"The World", type:"Practice", tagEn:"Completion and Mastery in Learning", tagTh:"ความสำเร็จและความเชี่ยวชาญในการเรียนรู้",
+   openEn:"You're amazing! Celebrate yourself and your success.", openTh:"เก่งมาก! ชื่นชมตัวเองให้เท่ากับสิ่งที่คุณได้ทำ",
+   meanEn:"Represents completion and mastery, symbolizing the fulfillment of goals and a sense of wholeness. It encourages reflection, appreciation, and celebration of past achievements, while using the lessons and values gained to embrace meaningful new opportunities and inspire future growth.",
+   meanTh:"เป็นสัญลักษณ์ของการบรรลุเป้าหมายและความสมบูรณ์แบบ แสดงถึงความเชี่ยวชาญและการเติมเต็มในทุกมิติ ส่งเสริมให้เราทบทวน ชื่นชม และเฉลิมฉลองความสำเร็จที่ผ่านมา พร้อมนำบทเรียนและคุณค่าที่ได้รับไปต่อยอด เพื่อเปิดรับโอกาสใหม่ที่มีความหมายและสร้างแรงบันดาลใจต่อไป"}
+];
+
+// stars background
+const starsEl = document.getElementById('stars');
+for(let i=0;i<60;i++){
+  const s = document.createElement('span');
+  s.style.left = Math.random()*100+'%';
+  s.style.top = Math.random()*100+'%';
+  s.style.animationDelay = (Math.random()*3)+'s';
+  s.style.width = s.style.height = (Math.random()*2+1.5)+'px';
+  starsEl.appendChild(s);
+}
+
+const cardFrame = document.getElementById('cardFrame');
+const card3d = document.getElementById('card3d');
+const cardImg = document.getElementById('cardImg');
+const drawBtn = document.getElementById('drawBtn');
+const rerollBtn = document.getElementById('rerollBtn');
+const statusEl = document.getElementById('status');
+const reading = document.getElementById('reading');
+
+function todayKey(){
+  const d = new Date();
+  return d.getFullYear()+'-'+(d.getMonth()+1)+'-'+d.getDate();
+}
+
+function pickCard(forceRandom){
+  if(!forceRandom){
+    const saved = localStorage.getItem('tol_daily');
+    if(saved){
+      const data = JSON.parse(saved);
+      if(data.date === todayKey()){
+        return CARDS[data.n];
+      }
+    }
+  }
+  const card = CARDS[Math.floor(Math.random()*CARDS.length)];
+  localStorage.setItem('tol_daily', JSON.stringify({date: todayKey(), n: card.n}));
+  return card;
+}
+
+function renderReading(card){
+  document.getElementById('rName').textContent = card.head;
+  document.getElementById('rType').textContent = card.type + ' — ' + card.tagTh + ' / ' + card.tagEn;
+  document.getElementById('rQuote').innerHTML = '"' + card.openTh + '"<span class="en">' + card.openEn + '</span>';
+  document.getElementById('rMeaning').innerHTML = card.meanTh + '<span class="en">' + card.meanEn + '</span>';
+}
+
+function revealCard(card){
+  cardImg.src = 'assets/cards/' + card.img;
+  cardImg.alt = card.head;
+  card3d.classList.add('flipped');
+  cardFrame.classList.add('revealed');
+  renderReading(card);
+  setTimeout(()=>{ reading.classList.add('show'); }, 350);
+}
+
+function runDraw(forceRandom){
+  drawBtn.disabled = true;
+  rerollBtn.disabled = true;
+  reading.classList.remove('show');
+  card3d.classList.remove('flipped');
+  cardFrame.classList.remove('revealed');
+  cardImg.src = '';
+
+  const messages = ['กำลังสลับไพ่...', 'จักรวาลกำลังเลือกให้คุณ...', 'รอสักครู่...'];
+  let mi = 0;
+  statusEl.textContent = messages[0];
+  card3d.classList.add('shaking');
+  const msgInterval = setInterval(()=>{
+    mi = (mi+1) % messages.length;
+    statusEl.textContent = messages[mi];
+  }, 700);
+
+  const delay = 1700 + Math.random()*900; // suspense delay
+  setTimeout(()=>{
+    clearInterval(msgInterval);
+    card3d.classList.remove('shaking');
+    statusEl.textContent = '';
+    const card = pickCard(forceRandom);
+    revealCard(card);
+    drawBtn.disabled = false;
+    rerollBtn.disabled = false;
+    drawBtn.textContent = 'เปิดไพ่อีกครั้ง';
+  }, delay);
+}
+
+drawBtn.addEventListener('click', ()=> runDraw(false));
+rerollBtn.addEventListener('click', ()=> runDraw(true));
+
+// auto-show if already drawn today, no animation
+(function init(){
+  const saved = localStorage.getItem('tol_daily');
+  if(saved){
+    const data = JSON.parse(saved);
+    if(data.date === todayKey()){
+      const card = CARDS[data.n];
+      cardImg.src = 'assets/cards/' + card.img;
+      cardImg.alt = card.head;
+      card3d.classList.add('flipped');
+      cardFrame.classList.add('revealed');
+      renderReading(card);
+      reading.classList.add('show');
+      drawBtn.textContent = 'เปิดไพ่อีกครั้ง';
+    }
+  }
+})();
+</script>
+
+</body>
+</html>
