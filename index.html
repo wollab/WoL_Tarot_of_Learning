@@ -423,7 +423,8 @@
       <h2>สรุปคำแนะนำของคุณ</h2>
       <div id="summaryList"></div>
       <div class="summary-actions">
-        <button class="share" id="shareBtn">📸 บันทึก/แชร์ภาพสรุป</button>
+        <button class="share" id="saveImgBtn">💾 บันทึกภาพสรุป</button>
+        <button class="share" id="shareImgBtn">📤 แชร์ภาพสรุป</button>
         <button class="secondary" id="restartBtn">เปิดชุดนี้อีกครั้ง</button>
         <button id="otherModeBtn">ลองโหมดอื่น</button>
       </div>
@@ -944,41 +945,66 @@ async function buildSummaryCanvas(){
   return canvas;
 }
 
-const shareBtn = document.getElementById('shareBtn');
-shareBtn.addEventListener('click', async ()=>{
-  shareBtn.disabled = true;
-  const originalText = shareBtn.textContent;
-  shareBtn.textContent = 'กำลังสร้างภาพ...';
+function canvasToBlob(canvas){
+  return new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+}
+
+async function withButtonBusy(btn, busyText, fn){
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = busyText;
   try{
-    const canvas = await buildSummaryCanvas();
-    canvas.toBlob(async (blob)=>{
-      const file = new File([blob], 'tarot-of-learning-summary.png', {type:'image/png'});
-      if(navigator.canShare && navigator.canShare({files:[file]})){
-        try{
-          await navigator.share({
-            files:[file],
-            title:'Tarot of Learning',
-            text:'คำแนะนำของฉันจาก Tarot of Learning by Wizards of Learning'
-          });
-        }catch(e){ /* user cancelled share */ }
-      }else{
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'tarot-of-learning-summary.png';
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      }
-      shareBtn.disabled = false;
-      shareBtn.textContent = originalText;
-    }, 'image/png');
+    await fn();
   }catch(err){
     console.error(err);
-    shareBtn.disabled = false;
-    shareBtn.textContent = originalText;
+  }finally{
+    btn.disabled = false;
+    btn.textContent = originalText;
   }
+}
+
+const saveImgBtn = document.getElementById('saveImgBtn');
+const shareImgBtn = document.getElementById('shareImgBtn');
+
+saveImgBtn.addEventListener('click', ()=>{
+  withButtonBusy(saveImgBtn, 'กำลังสร้างภาพ...', async ()=>{
+    const canvas = await buildSummaryCanvas();
+    const blob = await canvasToBlob(canvas);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'tarot-of-learning-summary.png';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  });
+});
+
+// Only show the share button on platforms that actually support sharing files
+// (most desktop browsers report navigator.share but silently fail on files).
+const canShareFiles = !!(navigator.canShare && navigator.share && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+if(!canShareFiles){
+  shareImgBtn.classList.add('hidden');
+}
+
+shareImgBtn.addEventListener('click', ()=>{
+  withButtonBusy(shareImgBtn, 'กำลังสร้างภาพ...', async ()=>{
+    const canvas = await buildSummaryCanvas();
+    const blob = await canvasToBlob(canvas);
+    const file = new File([blob], 'tarot-of-learning-summary.png', {type:'image/png'});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      try{
+        await navigator.share({
+          files:[file],
+          title:'Tarot of Learning',
+          text:'คำแนะนำของฉันจาก Tarot of Learning by Wizards of Learning'
+        });
+      }catch(e){ /* user cancelled share — not an error */ }
+    }else{
+      alert('อุปกรณ์นี้ไม่รองรับการแชร์ไฟล์ภาพ กดปุ่ม "บันทึกภาพสรุป" แทนได้เลยครับ');
+    }
+  });
 });
 
 function openModal(card, label){
