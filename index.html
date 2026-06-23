@@ -4,6 +4,17 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tarot of Learning — คำแนะนำประจำวัน</title>
+<meta name="description" content="เปิดไพ่ Tarot of Learning รับคำแนะนำการเรียนรู้ประจำวัน หรือเลือกสไปรด์แก้ปัญหา พัฒนาชีวิตรอบด้าน และรู้จักตัวเอง โดย Wizards of Learning">
+<meta property="og:title" content="Tarot of Learning — by Wizards of Learning">
+<meta property="og:description" content="เปิดไพ่ 1 ใบ หรือเลือกสไปรด์ รับคำแนะนำการเรียนรู้ที่ใช่สำหรับคุณวันนี้">
+<meta property="og:image" content="https://wollab.github.io/WoL_Tarot_of_Learning/assets/og-image.png">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://wollab.github.io/WoL_Tarot_of_Learning/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Tarot of Learning — by Wizards of Learning">
+<meta name="twitter:description" content="เปิดไพ่ 1 ใบ หรือเลือกสไปรด์ รับคำแนะนำการเรียนรู้ที่ใช่สำหรับคุณวันนี้">
+<meta name="twitter:image" content="https://wollab.github.io/WoL_Tarot_of_Learning/assets/og-image.png">
+<link rel="icon" href="assets/card-back.png">
 <style>
   @font-face{
     font-family:'Kanit';
@@ -108,8 +119,17 @@
   .mode-card .count{
     display:inline-block; font-size:.72rem; font-weight:600;
     background:var(--teal); color:#fff; padding:2px 10px; border-radius:999px;
-    margin-bottom:8px;
+    margin-bottom:10px;
   }
+  .layout-icon{
+    display:flex; gap:4px; align-items:flex-end; height:30px; margin-bottom:10px;
+  }
+  .layout-chip{
+    width:14px; height:24px; border-radius:3px;
+    background:linear-gradient(180deg, var(--teal), var(--teal-deep));
+    box-shadow:0 2px 5px rgba(26,133,134,.35);
+  }
+  .layout-chip.alt{ background:linear-gradient(180deg, var(--orange), var(--orange-deep)); height:28px; }
   .mode-card h3{
     margin:0 0 6px; font-size:1.02rem; font-weight:600; color:var(--teal-deep);
   }
@@ -277,6 +297,27 @@
   }
 
   .hidden{ display:none !important; }
+
+  /* ---- lock notice ---- */
+  .lock-box{
+    max-width:420px; margin:0 auto;
+    background:rgba(255,255,255,.75);
+    border:1.5px solid rgba(254,197,102,.5);
+    border-radius:16px;
+    padding:26px 22px;
+    box-shadow:0 12px 30px rgba(26,133,134,.12);
+  }
+  .lock-box p{ margin:0 0 10px; font-size:.88rem; color:var(--ink); line-height:1.6; }
+  .lock-box .small{ font-size:.78rem; color:var(--ink-soft); }
+  .lock-box input{
+    width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid rgba(80,194,192,.4);
+    font-family:inherit; font-size:.95rem; margin:10px 0; box-sizing:border-box;
+    text-align:center; letter-spacing:.05em;
+  }
+  .lock-box input:focus{ outline:none; border-color:var(--teal-deep); }
+  #unlockMsg{ font-size:.8rem; margin-top:8px; min-height:1.2em; }
+  #unlockMsg.error{ color:#c0392b; }
+  #unlockMsg.success{ color:var(--teal-deep); font-weight:600; }
 </style>
 </head>
 <body>
@@ -291,6 +332,14 @@
   <!-- MODE SELECT -->
   <div id="modeScreen">
     <div class="modes" id="modeList"></div>
+
+    <div class="lock-box hidden" id="lockNotice">
+      <p>✨ คุณลองเปิดไพ่ครบ 2 รอบแล้ว</p>
+      <p class="small">รีเฟรช/เปิดหน้านี้ใหม่เพื่อลองต่อ หรือกรอกเลขบาร์โค้ดบนกล่อง Tarot of Learning เพื่อปลดล็อกไม่จำกัด</p>
+      <input id="barcodeInput" placeholder="กรอกเลขบาร์โค้ด" maxlength="20">
+      <button id="unlockBtn">ปลดล็อก</button>
+      <div id="unlockMsg"></div>
+    </div>
   </div>
 
   <!-- SPREAD -->
@@ -470,14 +519,73 @@ let drawnCards = [];   // card object per slot, null until revealed
 let usedIdx = [];
 let revealIndex = 0;
 
+// ---- usage limit + barcode unlock ----
+const VALID_BARCODE = '8859787300375';
+const FREE_USES = 2;
+
+function isUnlocked(){
+  return localStorage.getItem('tol_unlocked') === '1';
+}
+function getUses(){
+  return parseInt(sessionStorage.getItem('tol_uses') || '0', 10);
+}
+function canStartSpread(){
+  return isUnlocked() || getUses() < FREE_USES;
+}
+function recordUse(){
+  if(isUnlocked()) return;
+  sessionStorage.setItem('tol_uses', String(getUses()+1));
+}
+function refreshModeScreenGate(){
+  if(canStartSpread()){
+    modeList.classList.remove('hidden');
+    lockNotice.classList.add('hidden');
+  }else{
+    modeList.classList.add('hidden');
+    lockNotice.classList.remove('hidden');
+  }
+}
+
+const lockNotice = document.getElementById('lockNotice');
+const barcodeInput = document.getElementById('barcodeInput');
+const unlockBtn = document.getElementById('unlockBtn');
+const unlockMsg = document.getElementById('unlockMsg');
+
+unlockBtn.addEventListener('click', ()=>{
+  const val = barcodeInput.value.trim();
+  if(val === VALID_BARCODE){
+    localStorage.setItem('tol_unlocked', '1');
+    unlockMsg.textContent = 'ปลดล็อกสำเร็จ! ขอบคุณที่เป็นเจ้าของ Tarot of Learning 🎉';
+    unlockMsg.className = 'success';
+    setTimeout(refreshModeScreenGate, 900);
+  }else{
+    unlockMsg.textContent = 'เลขบาร์โค้ดไม่ถูกต้อง ลองอีกครั้งครับ';
+    unlockMsg.className = 'error';
+  }
+});
+
+function layoutIconHtml(count){
+  let chips = '';
+  for(let i=0;i<count;i++){
+    chips += `<span class="layout-chip${i%2?' alt':''}"></span>`;
+  }
+  return `<div class="layout-icon">${chips}</div>`;
+}
+
 // ---- render mode select ----
 MODES.forEach(mode=>{
   const el = document.createElement('div');
   el.className = 'mode-card';
-  el.innerHTML = `<span class="count">${mode.slots.length} ใบ</span><h3>${mode.label}</h3><p>${mode.desc}</p>`;
-  el.addEventListener('click', ()=> startMode(mode));
+  el.innerHTML = `${layoutIconHtml(mode.slots.length)}<span class="count">${mode.slots.length} ใบ</span><h3>${mode.label}</h3><p>${mode.desc}</p>`;
+  el.addEventListener('click', ()=>{
+    if(!canStartSpread()){ refreshModeScreenGate(); return; }
+    recordUse();
+    startMode(mode);
+  });
   modeList.appendChild(el);
 });
+
+refreshModeScreenGate();
 
 function pickUniqueCard(){
   let idx;
@@ -613,12 +721,23 @@ modalBackdrop.addEventListener('click', e=>{ if(e.target === modalBackdrop) clos
 backLink.addEventListener('click', ()=>{
   spreadScreen.classList.add('hidden');
   modeScreen.classList.remove('hidden');
+  refreshModeScreenGate();
 });
 otherModeBtn.addEventListener('click', ()=>{
   spreadScreen.classList.add('hidden');
   modeScreen.classList.remove('hidden');
+  refreshModeScreenGate();
 });
-restartBtn.addEventListener('click', ()=> startMode(currentMode));
+restartBtn.addEventListener('click', ()=>{
+  if(!canStartSpread()){
+    spreadScreen.classList.add('hidden');
+    modeScreen.classList.remove('hidden');
+    refreshModeScreenGate();
+    return;
+  }
+  recordUse();
+  startMode(currentMode);
+});
 </script>
 
 </body>
