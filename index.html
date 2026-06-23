@@ -154,6 +154,13 @@
     font-size:.72rem; color:var(--ink-soft); line-height:1.4; min-height:2.2em;
   }
   .slot.revealed .slot-label{ color:var(--teal-deep); font-weight:600; }
+  .slot-quote{
+    font-size:.74rem; color:var(--orange-deep); line-height:1.45; font-style:italic;
+    opacity:0; transform:translateY(4px);
+    transition:opacity .5s ease, transform .5s ease;
+  }
+  .slot-quote.show{ opacity:1; transform:translateY(0); }
+  .slot-quote strong{ font-style:normal; color:var(--teal-deep); }
 
   .card-frame{ position:relative; }
   .card-3d{
@@ -230,7 +237,10 @@
     font-size:1.05rem; font-weight:600; color:var(--teal-deep); margin-bottom:4px;
   }
   .summary-item .quote{
-    font-style:italic; font-size:.92rem; color:var(--ink);
+    font-style:italic; font-size:.92rem; color:var(--ink); margin-bottom:8px;
+  }
+  .summary-item .meaning-short{
+    font-size:.84rem; color:var(--ink-soft); line-height:1.6;
   }
   .summary-actions{ margin-top:20px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
 
@@ -498,7 +508,8 @@ function startMode(mode){
           <div class="face front"><img src="" alt=""></div>
         </div>
       </div>
-      <div class="slot-label">${label}</div>`;
+      <div class="slot-label">${label}</div>
+      <div class="slot-quote"></div>`;
     slot.addEventListener('click', ()=>{
       if(slot.classList.contains('revealed') && drawnCards[i]){
         openModal(drawnCards[i], label);
@@ -556,6 +567,10 @@ drawBtn.addEventListener('click', ()=>{
     card3d.classList.add('flipped');
     slot.classList.add('revealed');
 
+    const quoteEl = slot.querySelector('.slot-quote');
+    quoteEl.innerHTML = `<strong>${card.head}</strong><br>"${card.openTh}"`;
+    setTimeout(()=>{ quoteEl.classList.add('show'); }, 350);
+
     revealIndex++;
     updateDrawButton();
 
@@ -574,7 +589,8 @@ function renderSummary(){
     item.innerHTML = `
       <div class="label">${label}</div>
       <div class="name">${card.head}</div>
-      <div class="quote">"${card.openTh}"</div>`;
+      <div class="quote">"${card.openTh}"</div>
+      <div class="meaning-short">${card.meanTh}</div>`;
     item.addEventListener('click', ()=> openModal(card, label));
     summaryList.appendChild(item);
   });
