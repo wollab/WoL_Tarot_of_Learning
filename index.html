@@ -138,6 +138,14 @@
   .mode-card p{
     margin:0; font-size:.78rem; color:var(--ink-soft); line-height:1.5;
   }
+  .mode-card .uses-left{
+    margin-top:8px; font-size:.7rem; color:var(--teal-deep); font-weight:600;
+  }
+  .mode-card.disabled{
+    cursor:default; opacity:.55; filter:grayscale(.4);
+  }
+  .mode-card.disabled:hover{ transform:none; box-shadow:none; border-color:rgba(80,194,192,.35); }
+  .mode-card.disabled .uses-left{ color:var(--orange-deep); }
   @media (max-width:480px){
     .modes{ grid-template-columns:1fr; }
   }
@@ -355,9 +363,9 @@
   <div id="modeScreen">
     <div class="modes" id="modeList"></div>
 
-    <div class="lock-box hidden" id="lockNotice">
-      <p>✨ คุณลองเปิดไพ่ครบ 2 รอบแล้ว</p>
-      <p class="small">รีเฟรช/เปิดหน้านี้ใหม่เพื่อลองต่อ หรือกรอกเลขบาร์โค้ดบนกล่อง Tarot of Learning เพื่อปลดล็อกไม่จำกัด</p>
+    <div class="lock-box" id="lockNotice">
+      <p>🔓 มีไพ่จริงอยู่แล้ว?</p>
+      <p class="small">กรอกเลขบาร์โค้ดบนกล่อง Tarot of Learning เพื่อปลดล็อกเล่นได้ไม่จำกัดทุกโหมด</p>
       <input id="barcodeInput" placeholder="กรอกเลขบาร์โค้ด" maxlength="20">
       <button id="unlockBtn">ปลดล็อก</button>
       <div id="unlockMsg"></div>
@@ -500,13 +508,13 @@ const CARDS = [
 ];
 
 const MODES = [
-  { id:'daily', label:'คำแนะนำประจำวัน', desc:'เปิดไพ่ 1 ใบ รับคำแนะนำสำหรับวันนี้', layout:'single',
+  { id:'daily', label:'คำแนะนำประจำวัน', desc:'เปิดไพ่ 1 ใบ รับคำแนะนำสำหรับวันนี้', layout:'single', maxUses:5,
     slots:['คำแนะนำของวันนี้'] },
-  { id:'solve', label:'การเรียนรู้ช่วยแก้ปัญหา', desc:'เปิด 3 ใบ ไล่ตามขั้นตอนแก้ปัญหา', layout:'pyramid',
+  { id:'solve', label:'การเรียนรู้ช่วยแก้ปัญหา', desc:'เปิด 3 ใบ ไล่ตามขั้นตอนแก้ปัญหา', layout:'pyramid', maxUses:2,
     slots:['ช่วยแก้ปัญหาในขั้นแรก','ช่วยเสริมความสำเร็จ','ป้องกันไม่ให้ปัญหากลับมา'] },
-  { id:'holistic', label:'การเรียนรู้พัฒนาชีวิตรอบด้าน', desc:'เปิด 5 ใบ มองชีวิตให้รอบด้าน', layout:'cross',
+  { id:'holistic', label:'การเรียนรู้พัฒนาชีวิตรอบด้าน', desc:'เปิด 5 ใบ มองชีวิตให้รอบด้าน', layout:'cross', maxUses:1,
     slots:['ด้านตัวตน จิตวิญญาณ','ด้านการงาน การเงิน','ด้านสังคม เพื่อนฝูง','ด้านความสัมพันธ์ ครอบครัว','ด้านสุขภาพ'] },
-  { id:'self', label:'การเรียนรู้ตนเอง', desc:'เปิด 3 ใบ สำรวจตัวเอง', layout:'pyramid',
+  { id:'self', label:'การเรียนรู้ตนเอง', desc:'เปิด 3 ใบ สำรวจตัวเอง', layout:'pyramid', maxUses:2,
     slots:['สิ่งที่ทำได้ดีและควรโฟกัสต่อ','สิ่งที่คอยฉุดรั้งโดยไม่รู้ตัว','สิ่งที่จะพาโอกาสดีๆมาให้'] }
 ];
 
@@ -564,34 +572,26 @@ let drawnCards = [];   // card object per slot, null until revealed
 let usedIdx = [];
 let revealIndex = 0;
 
-// ---- usage limit + barcode unlock ----
+// ---- usage limit (per mode) + barcode unlock ----
 const VALID_BARCODE = '8859787300375';
-const FREE_USES = 2;
 
 function isUnlocked(){
   return localStorage.getItem('tol_unlocked') === '1';
 }
-function getUses(){
-  return parseInt(sessionStorage.getItem('tol_uses') || '0', 10);
+function getUses(mode){
+  return parseInt(sessionStorage.getItem('tol_uses_'+mode.id) || '0', 10);
 }
-function canStartSpread(){
-  return isUnlocked() || getUses() < FREE_USES;
+function usesLeft(mode){
+  return isUnlocked() ? Infinity : Math.max(0, mode.maxUses - getUses(mode));
 }
-function recordUse(){
+function canUse(mode){
+  return isUnlocked() || getUses(mode) < mode.maxUses;
+}
+function recordUse(mode){
   if(isUnlocked()) return;
-  sessionStorage.setItem('tol_uses', String(getUses()+1));
-}
-function refreshModeScreenGate(){
-  if(canStartSpread()){
-    modeList.classList.remove('hidden');
-    lockNotice.classList.add('hidden');
-  }else{
-    modeList.classList.add('hidden');
-    lockNotice.classList.remove('hidden');
-  }
+  sessionStorage.setItem('tol_uses_'+mode.id, String(getUses(mode)+1));
 }
 
-const lockNotice = document.getElementById('lockNotice');
 const barcodeInput = document.getElementById('barcodeInput');
 const unlockBtn = document.getElementById('unlockBtn');
 const unlockMsg = document.getElementById('unlockMsg');
@@ -602,7 +602,7 @@ unlockBtn.addEventListener('click', ()=>{
     localStorage.setItem('tol_unlocked', '1');
     unlockMsg.textContent = 'ปลดล็อกสำเร็จ! ขอบคุณที่เป็นเจ้าของ Tarot of Learning 🎉';
     unlockMsg.className = 'success';
-    setTimeout(refreshModeScreenGate, 900);
+    renderModeList();
   }else{
     unlockMsg.textContent = 'เลขบาร์โค้ดไม่ถูกต้อง ลองอีกครั้งครับ';
     unlockMsg.className = 'error';
@@ -618,19 +618,32 @@ function layoutIconHtml(layout){
 }
 
 // ---- render mode select ----
-MODES.forEach(mode=>{
-  const el = document.createElement('div');
-  el.className = 'mode-card';
-  el.innerHTML = `${layoutIconHtml(mode.layout)}<span class="count">${mode.slots.length} ใบ</span><h3>${mode.label}</h3><p>${mode.desc}</p>`;
-  el.addEventListener('click', ()=>{
-    if(!canStartSpread()){ refreshModeScreenGate(); return; }
-    recordUse();
-    startMode(mode);
+function renderModeList(){
+  modeList.innerHTML = '';
+  MODES.forEach(mode=>{
+    const left = usesLeft(mode);
+    const locked = left <= 0;
+    const el = document.createElement('div');
+    el.className = 'mode-card' + (locked ? ' disabled' : '');
+    const usesText = isUnlocked()
+      ? 'ไม่จำกัด (ปลดล็อกแล้ว)'
+      : (locked ? 'ใช้ครบแล้ว — กรอกบาร์โค้ดเพื่อเล่นต่อ' : `เล่นได้อีก ${left} จาก ${mode.maxUses} รอบ`);
+    el.innerHTML = `${layoutIconHtml(mode.layout)}<span class="count">${mode.slots.length} ใบ</span><h3>${mode.label}</h3><p>${mode.desc}</p><p class="uses-left">${usesText}</p>`;
+    el.addEventListener('click', ()=>{
+      if(!canUse(mode)){
+        barcodeInput.focus();
+        unlockMsg.textContent = 'โหมดนี้ใช้ครบแล้ว กรอกเลขบาร์โค้ดเพื่อปลดล็อกไม่จำกัด';
+        unlockMsg.className = 'error';
+        return;
+      }
+      recordUse(mode);
+      startMode(mode);
+    });
+    modeList.appendChild(el);
   });
-  modeList.appendChild(el);
-});
+}
 
-refreshModeScreenGate();
+renderModeList();
 
 function pickUniqueCard(){
   let idx;
@@ -766,21 +779,21 @@ modalBackdrop.addEventListener('click', e=>{ if(e.target === modalBackdrop) clos
 backLink.addEventListener('click', ()=>{
   spreadScreen.classList.add('hidden');
   modeScreen.classList.remove('hidden');
-  refreshModeScreenGate();
+  renderModeList();
 });
 otherModeBtn.addEventListener('click', ()=>{
   spreadScreen.classList.add('hidden');
   modeScreen.classList.remove('hidden');
-  refreshModeScreenGate();
+  renderModeList();
 });
 restartBtn.addEventListener('click', ()=>{
-  if(!canStartSpread()){
+  if(!canUse(currentMode)){
     spreadScreen.classList.add('hidden');
     modeScreen.classList.remove('hidden');
-    refreshModeScreenGate();
+    renderModeList();
     return;
   }
-  recordUse();
+  recordUse(currentMode);
   startMode(currentMode);
 });
 </script>
