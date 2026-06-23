@@ -262,7 +262,13 @@
     margin-bottom:12px;
     text-align:left;
     box-shadow:0 8px 22px rgba(26,133,134,.08);
+    display:flex; gap:14px; align-items:flex-start;
   }
+  .summary-item .summary-thumb{
+    flex:none; width:54px; height:92px; object-fit:cover;
+    border-radius:6px; box-shadow:0 4px 10px rgba(26,133,134,.25);
+  }
+  .summary-item .summary-text{ flex:1; min-width:0; }
   .summary-item .label{
     font-size:.74rem; color:var(--orange-deep); font-weight:600; margin-bottom:4px;
   }
@@ -276,6 +282,9 @@
     font-size:.84rem; color:var(--ink-soft); line-height:1.6;
   }
   .summary-actions{ margin-top:20px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
+  .summary-actions button.share{
+    background:linear-gradient(180deg, var(--teal), var(--teal-deep));
+  }
 
   /* ---- modal ---- */
   .modal-backdrop{
@@ -414,6 +423,7 @@
       <h2>สรุปคำแนะนำของคุณ</h2>
       <div id="summaryList"></div>
       <div class="summary-actions">
+        <button class="share" id="shareBtn">📸 บันทึก/แชร์ภาพสรุป</button>
         <button class="secondary" id="restartBtn">เปิดชุดนี้อีกครั้ง</button>
         <button id="otherModeBtn">ลองโหมดอื่น</button>
       </div>
@@ -791,15 +801,185 @@ function renderSummary(){
     const item = document.createElement('div');
     item.className = 'summary-item';
     item.innerHTML = `
-      <div class="label">${label}</div>
-      <div class="name">${card.head}</div>
-      <div class="quote">"${card.openTh}"</div>
-      <div class="meaning-short">${card.meanTh}</div>`;
+      <img class="summary-thumb" src="assets/cards/${card.img}" alt="${card.head}">
+      <div class="summary-text">
+        <div class="label">${label}</div>
+        <div class="name">${card.head}</div>
+        <div class="quote">"${card.openTh}"</div>
+        <div class="meaning-short">${card.meanTh}</div>
+      </div>`;
     item.addEventListener('click', ()=> openModal(card, label));
     summaryList.appendChild(item);
   });
   setTimeout(()=>{ summary.classList.add('show'); }, 200);
 }
+
+// ---- shareable summary image ----
+function loadImg(src){
+  return new Promise((resolve, reject)=>{
+    const img = new Image();
+    img.onload = ()=>resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+
+function wrapText(ctx, text, x, y, maxWidth, lineHeight){
+  // Thai text often has no spaces between words, so wrap character-by-character
+  // (splitting only on spaces would leave un-breakable runs that overflow the box).
+  const chars = text.split('');
+  let line = '';
+  let lines = 0;
+  for(const ch of chars){
+    const test = line + ch;
+    if(ctx.measureText(test).width > maxWidth && line){
+      ctx.fillText(line, x, y + lines*lineHeight);
+      line = ch === ' ' ? '' : ch;
+      lines++;
+    }else{
+      line = test;
+    }
+  }
+  ctx.fillText(line, x, y + lines*lineHeight);
+  return lines + 1;
+}
+
+async function buildSummaryCanvas(){
+  const cardsDrawn = currentMode.slots.map((label,i)=>({label, card: drawnCards[i]})).filter(x=>x.card);
+  const concern = concernBox.classList.contains('hidden') ? '' : concernInput.value.trim();
+
+  const W = 720;
+  const headerH = 130;
+  const concernH = concern ? 100 : 0;
+  const rowH = 150;
+  const footerH = 170;
+  const H = headerH + concernH + cardsDrawn.length*rowH + footerH + 30;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+
+  const bgGrad = ctx.createLinearGradient(0,0,0,H);
+  bgGrad.addColorStop(0, '#fffdf8');
+  bgGrad.addColorStop(0.5, '#eaf7f6');
+  bgGrad.addColorStop(1, '#d8f0ee');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0,0,W,H);
+
+  const glow = ctx.createRadialGradient(W/2,0,10, W/2,0,420);
+  glow.addColorStop(0,'rgba(254,197,102,0.45)');
+  glow.addColorStop(1,'rgba(254,197,102,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0,0,W,320);
+
+  const [logo, boxImg] = await Promise.all([
+    loadImg('assets/wol-logo.png'),
+    loadImg('assets/box-mockup.png')
+  ]);
+
+  ctx.drawImage(logo, 30, 24, 60, 60);
+  ctx.fillStyle = '#1a8586';
+  ctx.font = '700 28px Kanit, sans-serif';
+  ctx.fillText('สรุปคำแนะนำของคุณ', 102, 52);
+  ctx.fillStyle = '#3f6e6d';
+  ctx.font = '400 15px Kanit, sans-serif';
+  ctx.fillText('Tarot of Learning — by Wizards of Learning', 102, 76);
+
+  let y = headerH;
+
+  if(concern){
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    roundRect(ctx, 30, y, W-60, concernH-16, 14); ctx.fill();
+    ctx.fillStyle = '#d78600';
+    ctx.font = '700 15px Kanit, sans-serif';
+    ctx.fillText('สิ่งที่คุณกังวล', 50, y+30);
+    ctx.fillStyle = '#1c4b4b';
+    ctx.font = 'italic 16px Kanit, sans-serif';
+    wrapText(ctx, '"'+concern+'"', 50, y+58, W-100, 22);
+    y += concernH;
+  }
+
+  for(const {label, card} of cardsDrawn){
+    ctx.fillStyle = 'rgba(255,255,255,0.75)';
+    roundRect(ctx, 30, y+10, W-60, rowH-20, 14); ctx.fill();
+
+    const thumb = await loadImg('assets/cards/'+card.img);
+    ctx.drawImage(thumb, 50, y+22, 70, 119);
+
+    ctx.fillStyle = '#d78600';
+    ctx.font = '700 14px Kanit, sans-serif';
+    ctx.fillText(label, 138, y+38);
+
+    ctx.fillStyle = '#1a8586';
+    ctx.font = '700 19px Kanit, sans-serif';
+    ctx.fillText(card.head, 138, y+64);
+
+    ctx.fillStyle = '#1c4b4b';
+    ctx.font = 'italic 15px Kanit, sans-serif';
+    wrapText(ctx, '"'+card.openTh+'"', 138, y+90, W-180, 20);
+
+    y += rowH;
+  }
+
+  ctx.fillStyle = 'rgba(255,255,255,0.85)';
+  roundRect(ctx, 30, y+10, W-60, footerH-30, 16); ctx.fill();
+  ctx.drawImage(boxImg, 48, y+18, 110, 110);
+  ctx.fillStyle = '#1a8586';
+  ctx.font = '700 21px Kanit, sans-serif';
+  ctx.fillText('Tarot of Learning', 175, y+55);
+  ctx.fillStyle = '#3f6e6d';
+  ctx.font = '400 14px Kanit, sans-serif';
+  wrapText(ctx, 'ไพ่ทาโรต์เพื่อการเรียนรู้ โดย Wizards of Learning หาไพ่จริงไว้เปิดเองได้ที่ Shopee', 175, y+82, W-220, 19);
+
+  return canvas;
+}
+
+const shareBtn = document.getElementById('shareBtn');
+shareBtn.addEventListener('click', async ()=>{
+  shareBtn.disabled = true;
+  const originalText = shareBtn.textContent;
+  shareBtn.textContent = 'กำลังสร้างภาพ...';
+  try{
+    const canvas = await buildSummaryCanvas();
+    canvas.toBlob(async (blob)=>{
+      const file = new File([blob], 'tarot-of-learning-summary.png', {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({
+            files:[file],
+            title:'Tarot of Learning',
+            text:'คำแนะนำของฉันจาก Tarot of Learning by Wizards of Learning'
+          });
+        }catch(e){ /* user cancelled share */ }
+      }else{
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'tarot-of-learning-summary.png';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+      shareBtn.disabled = false;
+      shareBtn.textContent = originalText;
+    }, 'image/png');
+  }catch(err){
+    console.error(err);
+    shareBtn.disabled = false;
+    shareBtn.textContent = originalText;
+  }
+});
 
 function openModal(card, label){
   modalImg.src = 'assets/cards/' + card.img;
