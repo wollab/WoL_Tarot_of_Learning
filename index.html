@@ -121,15 +121,17 @@
     background:var(--teal); color:#fff; padding:2px 10px; border-radius:999px;
     margin-bottom:10px;
   }
-  .layout-icon{
-    display:flex; gap:4px; align-items:flex-end; height:30px; margin-bottom:10px;
+  .layout-box{
+    position:relative; width:70px; height:64px; margin:0 auto 10px;
   }
   .layout-chip{
-    width:14px; height:24px; border-radius:3px;
+    position:absolute;
+    width:17px; height:28px; border-radius:3px;
     background:linear-gradient(180deg, var(--teal), var(--teal-deep));
     box-shadow:0 2px 5px rgba(26,133,134,.35);
+    display:flex; align-items:center; justify-content:center;
   }
-  .layout-chip.alt{ background:linear-gradient(180deg, var(--orange), var(--orange-deep)); height:28px; }
+  .layout-chip.alt{ background:linear-gradient(180deg, var(--orange), var(--orange-deep)); }
   .mode-card h3{
     margin:0 0 6px; font-size:1.02rem; font-weight:600; color:var(--teal-deep);
   }
@@ -498,15 +500,33 @@ const CARDS = [
 ];
 
 const MODES = [
-  { id:'daily', label:'คำแนะนำประจำวัน', desc:'เปิดไพ่ 1 ใบ รับคำแนะนำสำหรับวันนี้',
+  { id:'daily', label:'คำแนะนำประจำวัน', desc:'เปิดไพ่ 1 ใบ รับคำแนะนำสำหรับวันนี้', layout:'single',
     slots:['คำแนะนำของวันนี้'] },
-  { id:'solve', label:'การเรียนรู้ช่วยแก้ปัญหา', desc:'เปิด 3 ใบ ไล่ตามขั้นตอนแก้ปัญหา',
+  { id:'solve', label:'การเรียนรู้ช่วยแก้ปัญหา', desc:'เปิด 3 ใบ ไล่ตามขั้นตอนแก้ปัญหา', layout:'pyramid',
     slots:['ช่วยแก้ปัญหาในขั้นแรก','ช่วยเสริมความสำเร็จ','ป้องกันไม่ให้ปัญหากลับมา'] },
-  { id:'holistic', label:'การเรียนรู้พัฒนาชีวิตรอบด้าน', desc:'เปิด 5 ใบ มองชีวิตให้รอบด้าน',
+  { id:'holistic', label:'การเรียนรู้พัฒนาชีวิตรอบด้าน', desc:'เปิด 5 ใบ มองชีวิตให้รอบด้าน', layout:'cross',
     slots:['ด้านตัวตน จิตวิญญาณ','ด้านการงาน การเงิน','ด้านสังคม เพื่อนฝูง','ด้านความสัมพันธ์ ครอบครัว','ด้านสุขภาพ'] },
-  { id:'self', label:'การเรียนรู้ตนเอง', desc:'เปิด 3 ใบ สำรวจตัวเอง',
+  { id:'self', label:'การเรียนรู้ตนเอง', desc:'เปิด 3 ใบ สำรวจตัวเอง', layout:'pyramid',
     slots:['สิ่งที่ทำได้ดีและควรโฟกัสต่อ','สิ่งที่คอยฉุดรั้งโดยไม่รู้ตัว','สิ่งที่จะพาโอกาสดีๆมาให้'] }
 ];
+
+const LAYOUT_POSITIONS = {
+  single: [
+    { left:26, top:18, rot:0 }
+  ],
+  pyramid: [
+    { left:4,  top:30, rot:-8 },
+    { left:30, top:30, rot:8 },
+    { left:17, top:4,  rot:0, alt:true }
+  ],
+  cross: [
+    { left:4,  top:4,  rot:-25 },
+    { left:42, top:4,  rot:25 },
+    { left:23, top:18, rot:0, alt:true },
+    { left:4,  top:32, rot:25 },
+    { left:42, top:32, rot:-25 }
+  ]
+};
 
 // soft floating sparkles
 const sparkleHost = document.getElementById('sparkles');
@@ -589,19 +609,19 @@ unlockBtn.addEventListener('click', ()=>{
   }
 });
 
-function layoutIconHtml(count){
-  let chips = '';
-  for(let i=0;i<count;i++){
-    chips += `<span class="layout-chip${i%2?' alt':''}"></span>`;
-  }
-  return `<div class="layout-icon">${chips}</div>`;
+function layoutIconHtml(layout){
+  const positions = LAYOUT_POSITIONS[layout] || LAYOUT_POSITIONS.single;
+  const chips = positions.map(p=>
+    `<span class="layout-chip${p.alt?' alt':''}" style="left:${p.left}px;top:${p.top}px;transform:rotate(${p.rot}deg);"></span>`
+  ).join('');
+  return `<div class="layout-box">${chips}</div>`;
 }
 
 // ---- render mode select ----
 MODES.forEach(mode=>{
   const el = document.createElement('div');
   el.className = 'mode-card';
-  el.innerHTML = `${layoutIconHtml(mode.slots.length)}<span class="count">${mode.slots.length} ใบ</span><h3>${mode.label}</h3><p>${mode.desc}</p>`;
+  el.innerHTML = `${layoutIconHtml(mode.layout)}<span class="count">${mode.slots.length} ใบ</span><h3>${mode.label}</h3><p>${mode.desc}</p>`;
   el.addEventListener('click', ()=>{
     if(!canStartSpread()){ refreshModeScreenGate(); return; }
     recordUse();
