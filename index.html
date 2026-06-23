@@ -293,7 +293,27 @@
   hr.div{ border:none; border-top:1px solid rgba(80,194,192,.3); margin:12px 0; }
 
   footer{
-    margin-top:30px; font-size:.72rem; color:var(--ink-soft); opacity:.7;
+    margin-top:14px; font-size:.72rem; color:var(--ink-soft); opacity:.7;
+  }
+
+  .shop-cta{
+    margin-top:36px; padding-top:22px; border-top:1px solid rgba(80,194,192,.25);
+    text-align:center;
+  }
+  .shop-cta p{
+    margin:0 0 10px; font-size:.85rem; color:var(--ink-soft);
+  }
+  .shop-cta a{
+    display:inline-block; text-decoration:none;
+    font-family:inherit; font-weight:600; font-size:.95rem; letter-spacing:.02em;
+    padding:11px 28px; border-radius:999px;
+    background:linear-gradient(180deg, var(--teal), var(--teal-deep));
+    color:#fff;
+    box-shadow:0 8px 20px rgba(26,133,134,.3);
+    transition:transform .15s ease, box-shadow .25s ease;
+  }
+  .shop-cta a:hover{
+    box-shadow:0 10px 26px rgba(26,133,134,.4); transform:translateY(-1px);
   }
 
   .hidden{ display:none !important; }
@@ -361,6 +381,11 @@
         <button id="otherModeBtn">ลองโหมดอื่น</button>
       </div>
     </div>
+  </div>
+
+  <div class="shop-cta">
+    <p>อยากได้สำรับจริงไว้ใช้เอง หรือเป็นของขวัญ?</p>
+    <a href="https://shopee.co.th/wizards.of.learning/24547926267" target="_blank" rel="noopener">🛒 สั่งซื้อ Tarot of Learning</a>
   </div>
 
   <footer>Tarot of Learning — by Wizards of Learning</footer>
