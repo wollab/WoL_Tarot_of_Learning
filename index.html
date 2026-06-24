@@ -281,9 +281,33 @@
   .summary-item .meaning-short{
     font-size:.84rem; color:var(--ink-soft); line-height:1.6;
   }
-  .summary-actions{ margin-top:20px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap; }
-  .summary-actions button.share{
+  .share-actions{
+    margin-top:20px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;
+  }
+  .share-btn{
+    font-family:inherit; font-weight:600; font-size:.82rem; letter-spacing:.01em;
+    padding:9px 16px; border-radius:999px; border:none;
     background:linear-gradient(180deg, var(--teal), var(--teal-deep));
+    color:#fff; cursor:pointer;
+    box-shadow:0 5px 14px rgba(26,133,134,.28);
+    transition:transform .15s ease, box-shadow .25s ease, opacity .2s ease;
+  }
+  .share-btn:hover{ box-shadow:0 7px 18px rgba(26,133,134,.38); transform:translateY(-1px); }
+  .share-btn:disabled{ opacity:.45; cursor:default; transform:none; box-shadow:none; }
+
+  .nav-actions{
+    margin-top:16px; display:flex; justify-content:space-between; align-items:center; gap:10px;
+  }
+  .nav-btn{
+    font-family:inherit; font-weight:500; font-size:.82rem;
+    padding:8px 14px; border-radius:999px; border:1.5px solid rgba(80,194,192,.45);
+    background:transparent; color:var(--teal-deep); cursor:pointer;
+    transition:background .15s ease;
+  }
+  .nav-btn:hover{ background:rgba(80,194,192,.1); }
+  .uses-inline{ font-size:.74rem; opacity:.75; font-weight:400; }
+  @media (max-width:440px){
+    .nav-actions{ flex-direction:column; align-items:stretch; }
   }
 
   hr.div{ border:none; border-top:1px solid rgba(80,194,192,.3); margin:12px 0; }
@@ -427,12 +451,16 @@
     <div class="summary" id="summary">
       <h2>สรุปคำแนะนำของคุณ</h2>
       <div id="summaryList"></div>
-      <div class="summary-actions">
-        <button class="share" id="saveImgBtn">💾 บันทึกภาพสรุป</button>
-        <button class="share" id="shareImgBtn">📤 แชร์ภาพสรุป</button>
-        <button class="secondary" id="copyCaptionBtn">📋 คัดลอกแคปชั่นชวนเล่น</button>
-        <button class="secondary" id="restartBtn">เปิดชุดนี้อีกครั้ง</button>
-        <button id="otherModeBtn">ลองโหมดอื่น</button>
+
+      <div class="share-actions">
+        <button class="share-btn" id="saveImgBtn">💾 บันทึกรูป</button>
+        <button class="share-btn" id="shareImgBtn">📤 แชร์</button>
+        <button class="share-btn" id="copyCaptionBtn">📋 คัดลอกแคปชั่น</button>
+      </div>
+
+      <div class="nav-actions">
+        <button class="nav-btn" id="restartBtn">🔁 เล่นซ้ำ <span id="restartUsesLeft" class="uses-inline"></span></button>
+        <button class="nav-btn" id="otherModeBtn">🔀 เลือกโหมดใหม่</button>
       </div>
     </div>
   </div>
@@ -733,7 +761,7 @@ function startMode(mode){
 
   summary.classList.remove('show');
   summaryList.innerHTML = '';
-  statusEl.textContent = 'แตะไพ่ใบไหนก่อนก็ได้เลย';
+  statusEl.textContent = 'เลือกเปิดใบไหนก่อนก็ได้';
 
   modeScreen.classList.add('hidden');
   spreadScreen.classList.remove('hidden');
@@ -812,6 +840,15 @@ function renderSummary(){
       </div>`;
     summaryList.appendChild(item);
   });
+
+  const restartUsesLeft = document.getElementById('restartUsesLeft');
+  if(isUnlocked()){
+    restartUsesLeft.textContent = '(ไม่จำกัด)';
+  }else{
+    const left = usesLeft(currentMode);
+    restartUsesLeft.textContent = left > 0 ? `(เหลือ ${left} ครั้ง)` : '(ครบโควต้าแล้ว)';
+  }
+
   setTimeout(()=>{ summary.classList.add('show'); }, 200);
 }
 
@@ -1013,9 +1050,9 @@ copyCaptionBtn.addEventListener('click', async ()=>{
   const original = copyCaptionBtn.textContent;
   try{
     await navigator.clipboard.writeText(buildShareCaption());
-    copyCaptionBtn.textContent = '✅ คัดลอกแล้ว! เอาไปวางตอนโพสต์ได้เลย';
+    copyCaptionBtn.textContent = '✅ คัดลอกแล้ว!';
   }catch(e){
-    copyCaptionBtn.textContent = '⚠️ คัดลอกไม่สำเร็จ ลองใหม่อีกครั้ง';
+    copyCaptionBtn.textContent = '⚠️ คัดลอกไม่สำเร็จ';
   }
   setTimeout(()=>{ copyCaptionBtn.textContent = original; }, 2500);
 });
