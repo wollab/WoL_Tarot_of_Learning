@@ -575,9 +575,9 @@ const CARDS = [
 ];
 
 const MODES = [
-  { id:'daily', label:'คำแนะนำประจำวัน', desc:'เปิดไพ่ 1 ใบ รับคำแนะนำสำหรับวันนี้', layout:'single', maxUses:3,
+  { id:'daily', label:'คำแนะนำประจำวัน', desc:'เปิดไพ่ 1 ใบ รับคำแนะนำสำหรับวันนี้', layout:'single', maxUses:2,
     slots:['คำแนะนำของวันนี้'] },
-  { id:'solve', label:'การเรียนรู้ช่วยแก้ปัญหา', desc:'เปิด 3 ใบ ไล่ตามขั้นตอนแก้ปัญหา', layout:'pyramid', maxUses:2,
+  { id:'solve', label:'การเรียนรู้ช่วยแก้ปัญหา', desc:'เปิด 3 ใบ ไล่ตามขั้นตอนแก้ปัญหา', layout:'pyramid', maxUses:1,
     slots:['ช่วยแก้ปัญหาในขั้นแรก','ช่วยเสริมความสำเร็จ','ป้องกันไม่ให้ปัญหากลับมา'] },
   { id:'holistic', label:'การเรียนรู้พัฒนาชีวิตรอบด้าน', desc:'เปิด 5 ใบ มองชีวิตให้รอบด้าน', layout:'cross', maxUses:1,
     slots:['ด้านตัวตน จิตวิญญาณ','ด้านการงาน การเงิน','ด้านสังคม เพื่อนฝูง','ด้านความสัมพันธ์ ครอบครัว','ด้านสุขภาพ'] },
@@ -636,24 +636,48 @@ let drawnCards = [];   // card object per slot, null until revealed
 let usedIdx = [];
 let isRevealing = false;
 
-// ---- usage limit (per mode) + barcode unlock ----
+// ---- usage limit (demo choice) + barcode unlock ----
 const VALID_BARCODE = '8859787300375';
+const SELECTED_EXTRA_MODE_KEY = 'tol_selected_extra_mode';
 
 function isUnlocked(){
   return localStorage.getItem('tol_unlocked') === '1';
 }
+function isExtraMode(mode){
+  return mode.id !== 'daily';
+}
+function selectedExtraMode(){
+  return sessionStorage.getItem(SELECTED_EXTRA_MODE_KEY);
+}
 function getUses(mode){
   return parseInt(sessionStorage.getItem('tol_uses_'+mode.id) || '0', 10);
 }
+function isLockedByExtraModeChoice(mode){
+  const selected = selectedExtraMode();
+  return !isUnlocked() && isExtraMode(mode) && selected && selected !== mode.id;
+}
 function usesLeft(mode){
+  if(isLockedByExtraModeChoice(mode)) return 0;
   return isUnlocked() ? Infinity : Math.max(0, mode.maxUses - getUses(mode));
 }
 function canUse(mode){
-  return isUnlocked() || getUses(mode) < mode.maxUses;
+  return isUnlocked() || (!isLockedByExtraModeChoice(mode) && getUses(mode) < mode.maxUses);
 }
 function recordUse(mode){
   if(isUnlocked()) return;
+  if(isExtraMode(mode) && !selectedExtraMode()){
+    sessionStorage.setItem(SELECTED_EXTRA_MODE_KEY, mode.id);
+  }
   sessionStorage.setItem('tol_uses_'+mode.id, String(getUses(mode)+1));
+}
+function lockMessage(mode){
+  if(isLockedByExtraModeChoice(mode)){
+    return 'เดโมให้เลือกทดลองโหมดพิเศษได้ 1 โหมด ถ้าอยากใช้ครบทุกโหมด กรอกบาร์โค้ดบนกล่องเพื่อปลดล็อกนะ';
+  }
+  if(mode.id === 'daily'){
+    return 'เดโมเปิดไพ่ประจำวันได้ 2 ครั้ง ถ้าอยากใช้ไม่จำกัด กรอกบาร์โค้ดบนกล่องเพื่อปลดล็อกนะ';
+  }
+  return 'โหมดนี้ทดลองครบแล้ว กรอกบาร์โค้ดบนกล่องเพื่อปลดล็อกทุกโหมดนะ';
 }
 
 const barcodeInput = document.getElementById('barcodeInput');
@@ -686,18 +710,29 @@ function renderModeList(){
   modeList.innerHTML = '';
   MODES.forEach(mode=>{
     const left = usesLeft(mode);
-    const locked = left <= 0;
+    const locked = !canUse(mode);
     const el = document.createElement('div');
     el.className = 'mode-card' + (locked ? ' disabled' : '');
-    const usesText = isUnlocked()
-      ? 'เล่นได้ไม่จำกัดแล้ว ✨'
-      : (locked ? 'ครบโควต้าแล้ว ลองกรอกบาร์โค้ดดูสิ' : `เปิดได้อีก ${left} ครั้ง`);
+    let usesText = 'เล่นได้ไม่จำกัดแล้ว ✨';
+    if(!isUnlocked()){
+      if(isLockedByExtraModeChoice(mode)){
+        usesText = 'ล็อกแล้ว เพราะเลือกทดลองโหมดพิเศษอื่นไปแล้ว';
+      }else if(locked){
+        usesText = mode.id === 'daily'
+          ? 'เปิดไพ่ประจำวันครบ 2 ครั้งแล้ว'
+          : 'ทดลองโหมดนี้ครบแล้ว';
+      }else if(mode.id === 'daily'){
+        usesText = `เปิดไพ่ประจำวันได้อีก ${left} ครั้ง`;
+      }else{
+        usesText = 'เลือกทดลองได้ 1 โหมดพิเศษ';
+      }
+    }
     el.innerHTML = `${layoutIconHtml(mode.layout)}<span class="count">${mode.slots.length} ใบ</span><h3>${mode.label}</h3><p>${mode.desc}</p><p class="uses-left">${usesText}</p>`;
     el.addEventListener('click', ()=>{
       if(!canUse(mode)){
         document.getElementById('lockNotice').scrollIntoView({behavior:'smooth', block:'center'});
         barcodeInput.focus();
-        unlockMsg.textContent = 'โหมดนี้ครบโควต้าแล้ว กรอกบาร์โค้ดด้านล่างเพื่อเล่นไม่จำกัดนะ';
+        unlockMsg.textContent = lockMessage(mode);
         unlockMsg.className = 'error';
         return;
       }
@@ -779,7 +814,7 @@ function revealSlot(i, label){
   const frontImg = slot.querySelector('.face.front img');
   const burst = slot.querySelector('.burst');
 
-  const messages = ['กำลังสลับไพ่...', 'จักรวาลกำลังเลือกให้คุณ...', 'รอสักครู่...'];
+  const messages = ['กำลังสลับไพ่...', 'ระบบกำลังสุ่มไพ่ให้คุณ...', 'รอสักครู่...'];
   statusEl.textContent = messages[Math.floor(Math.random()*messages.length)];
   card3d.classList.add('shaking');
   cardFrame.classList.add('charging');
